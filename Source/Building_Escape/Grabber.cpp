@@ -6,7 +6,9 @@
 #define OUT
 
 UGrabber::UGrabber()
-{}
+{
+	PrimaryComponentTick.bCanEverTick = true;
+}
 
 void UGrabber::BeginPlay() // Runs the functions when the Game starts.
 {
@@ -29,7 +31,7 @@ void UGrabber::SetUpInputComponent () // Sets up the input we will give to grab 
 void UGrabber::FindPhysicsHandle () // Checks if the Player has the PhysicsHandle component
 {
 	PhysicsHandle= GetOwner()->FindComponentByClass<UPhysicsHandleComponent>();
-	if(PhysicsHandle == nullptr)
+	if(!PhysicsHandle)
 	{
 		UE_LOG(LogTemp, Error,TEXT("%s doesn't have the component..."), *GetOwner()->GetName());
 	}
@@ -37,11 +39,12 @@ void UGrabber::FindPhysicsHandle () // Checks if the Player has the PhysicsHandl
 
 void UGrabber::Grab() // Function to Grab Objects
 {
-	GetPlayersReach();
 	FHitResult HitResult = GetFirstPhysicsBodyInReach();
 	UPrimitiveComponent* ComponentToGrab = HitResult.GetComponent();
-if(HitResult.GetActor())
+	AActor* Actorhit = HitResult.GetActor();
+if(Actorhit)
 {
+	UE_LOG(LogTemp, Error,TEXT("Grabbed."));
 	PhysicsHandle->GrabComponentAtLocation
 	(
 		ComponentToGrab,
@@ -50,18 +53,16 @@ if(HitResult.GetActor())
 	);
 }
 }
-
-
-
 void UGrabber::Release() // Function to release Objects
 {
+	UE_LOG(LogTemp, Error,TEXT("Released."));
 	PhysicsHandle->ReleaseComponent();
 }
 
 void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)  // Runs the codes in every frame in the Game
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	GetPlayersReach();
+
 	if(PhysicsHandle->GrabbedComponent) 
 	{
 		PhysicsHandle->SetTargetLocation(GetPlayersReach());
@@ -70,19 +71,18 @@ void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompone
 }
 FHitResult UGrabber::GetFirstPhysicsBodyInReach() const
 {
-	
-	GetPlayersReach();
 	FHitResult Hit;
     FCollisionQueryParams TraceParams(FName(TEXT("")),false,GetOwner());
+
+	FVector EndOfLineTrace = GetPlayersReach();
 
 GetWorld()->LineTraceSingleByObjectType(
 	OUT Hit,
 	GetPlayersWorldPosition(),
-	GetPlayersReach(),
+	EndOfLineTrace,
 	FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
 	TraceParams
 );
-AActor* ActorHit= Hit.GetActor();
 return Hit;
 }
 
@@ -93,7 +93,7 @@ FVector UGrabber::GetPlayersWorldPosition() const
 	
 	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint
 	(OUT PlayerViewPointLocation,OUT PlayerViewPointRotation);
-	return PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
+	return PlayerViewPointLocation;
 }
 
 FVector UGrabber::GetPlayersReach() const
